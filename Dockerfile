@@ -13,14 +13,14 @@ RUN dpkg --add-architecture i386 \
 RUN apt-get update && apt-get install -y --no-install-recommends curl \
         && rm -rf /var/lib/apt/lists/* \
         && curl -sSL https://github.com/mattrobenolt/envtpl/releases/download/0.1.0/envtpl-linux-amd64 -o envtpl \
-        && echo "90c40d624e0ce40d62a0ac132767bcd6c267ed55 envtpl" | sha1sum -c - \
+        && echo "e090af1fb5a047ed4a7968f4264db4a9c02bd104 envtpl" | sha1sum -c - \
         && chmod +x envtpl \
         && mv envtpl /usr/local/bin/ \
         && apt-get purge -y --auto-remove curl
 
-ENV UT2004_DOWNLOAD_URL http://gameservermanagers.com/files/ut2004/dedicatedserver3339-bonuspack.zip
+ENV UT2004_DOWNLOAD_URL http://ut2004.ut-files.com/index.php?dir=Patches/Server/&file=DedicatedServer3339-BonusPack.zip
 ENV UT2004_DOWNLOAD_SHA1 e1eda562d99e66a7e5972f05bbf0de8733bf60c9
-ENV UT2004_PATCH_DOWNLOAD_URL http://gameservermanagers.com/files/ut2004/ut2004-lnxpatch3369-2.tar.bz2
+ENV UT2004_PATCH_DOWNLOAD_URL http://ut2004.ut-files.com/index.php?dir=Patches/Linux/&file=ut2004-lnxpatch3369-2.tar.bz2
 ENV UT2004_PATCH_DOWNLOAD_SHA1 a8cc33877a02a0a09c288b5fc248efde282f7bdf
 ENV ADMIN_NAME admin
 ENV ADMIN_PASSWORD admin1
@@ -42,19 +42,29 @@ RUN buildDeps='curl bzip2 unzip' \
         # See: http://forums.tripwireinteractive.com/showpost.php?p=585435&postcount=13
         && sed -i 's/none}/none;/g' "/usr/src/ut2004/Web/ServerAdmin/ut2003.css" \
         && sed -i 's/underline}/underline;/g' "/usr/src/ut2004/Web/ServerAdmin/ut2003.css" \
+        # Move System folder for volume mapping
+        && chmod 777 /usr/src/ut2004/System/* \
+        && cp -R /usr/src/ut2004/System /usr/src/System \
+        && rm -rf /usr/src/ut2004/System \
+        && mkdir /usr/src/ut2004/System \
+        && chmod 777 /usr/src/ut2004/System \
         # Remove the included ini config
-        && rm /usr/src/ut2004/System/UT2004.ini \
+        #&& rm /usr/src/ut2004/System/UT2004.ini \
         && apt-get purge -y --auto-remove $buildDeps
 
 # Add in our config template
-COPY UT2004.ini.tpl /usr/src/ut2004/System/
+#COPY UT2004.ini.tpl /usr/src/ut2004/System/UT2004.ini
 
 WORKDIR /usr/src/ut2004/System
+
 ENV PATH=$PATH:/usr/src/ut2004/System
+
+VOLUME /usr/src/ut2004/System
 
 COPY docker-entrypoint.sh /entrypoint.sh
 
-EXPOSE 7777/udp 7778/udp 7787/udp 28902 80
+EXPOSE 7777/udp 7778/udp 7787/udp 28902/tcp 80/tcp
 
 ENTRYPOINT ["/entrypoint.sh"]
+
 CMD ["ucc-bin", "server", "DM-Morpheus3?game=XGame.xDeathMatch", "ini=UT2004.ini", "-nohomedir"]
